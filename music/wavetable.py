@@ -2,9 +2,10 @@
 import typing
 import math
 import random
-from .__init__ import sample_rate
 
-import discord
+from .parameters import sample_rate
+
+from .envelope import Envelope
 
 class WaveTable():
     """
@@ -18,12 +19,15 @@ class WaveTable():
         """
         self.wave_table = [function_continuous(x * period / samples) for x in range(samples)]
         self.samples = samples
+        self.last_sample_index = 0
 
     def __get_sample_interp(self, sample : float):
         """
         Function used linearly interpolate between samples.
         returns linear interpolated value of self.wave_table[sample % self.samples]
         """
+
+        # print(sample)
         return (self.wave_table[math.floor(sample) % self.samples] + self.wave_table[math.ceil(sample) % self.samples]) / 2.0
 
     def get_samples(self, frequency : float, **kwargs):
@@ -56,21 +60,75 @@ class WaveTable():
             samples = periods / frequency / sample_rate
         else:
             raise Exception("One of (samples, length, periods) must be specified.")
+        
+        samples = int(samples)
 
-        starting_phase = 0
+        start_sample = self.last_sample_index
         if "starting_phase" in kwargs:
             starting_phase = kwargs["starting_phase"]
+            start_sample = starting_phase / math.pi * self.samples
         elif "random_phase" in kwargs:
             starting_phase = random.random() * math.pi
+            start_sample = starting_phase / math.pi * self.samples
         
-        start_sample = starting_phase / math.pi * self.samples
-        table_step_size = self.samples / frequency / sample_rate
+        table_step_size = self.samples * (frequency / sample_rate)
         output = list()
 
         sample = start_sample
         for i in range(samples):
             output.append(self.__get_sample_interp(sample))
             sample += table_step_size
+        self.last_sample_index = sample
+        return output
+
+    def get_samples_bend(self, frequency1 : float, frequency2 : float, **kwargs):
+        """
+        Function used for sampling the wave table to get an output at a set frequency.
+
+        Required arguments:
+            frequency1: the frequency in hertz of the beginning of the ouput
+            frequency2: the frequency in hertz of the end of the output
+
+            One length specifier from:
+                samples: the length in samples of the output
+                length: the length in seconds of the output
+        Optional arguments:
+            starting_phase: phase to start the output at in radians
+                default: 0
+            random_phase: boolean indicating if a random phase offset should be applied
+                default: False
+        """
+
+        samples = False
+
+        if "samples" in kwargs:
+            samples = kwargs["samples"]
+        elif "length" in kwargs:
+            length = kwargs["length"]
+            samples = sample_rate * length
+        else:
+            raise Exception("One of (samples, length, periods) must be specified.")
+        
+        samples = int(samples)
+
+        start_sample = self.last_sample_index
+        if "starting_phase" in kwargs:
+            starting_phase = kwargs["starting_phase"]
+            start_sample = starting_phase / math.pi * self.samples
+        elif "random_phase" in kwargs:
+            starting_phase = random.random() * math.pi
+            start_sample = starting_phase / math.pi * self.samples
+        
+        table_step_size = self.samples * (frequency1 / sample_rate)
+        table_step_size_step_size = (self.samples * (frequency2 / sample_rate) - table_step_size) / samples
+        output = list()
+
+        sample = start_sample
+        for i in range(samples):
+            output.append(self.__get_sample_interp(sample))
+            sample += table_step_size
+            table_step_size += table_step_size_step_size
+        self.last_sample_index = sample
         return output
 
 class WaveTableHarmonic(WaveTable):
@@ -89,6 +147,9 @@ class WaveTableHarmonic(WaveTable):
             samples: number of samples to store in the table
                 default: 4096
         """
+
+        self.last_sample_index = 0
+
         phases = False
         if "phases" in kargs:
             phases  = kargs["phases"]
@@ -112,5 +173,9 @@ class WaveTableHarmonic(WaveTable):
         for sample in range(self.samples):
             for amplitude, phase in zip(amplitudes,phases):
                 self.wave_table[sample] += amplitude * math.cos(phase + sample / self.samples * math.pi * 2)
+        
+        max_amp = max(self.wave_table)
+
+        self.wave_table = [x / max_amp for x in self.wave_table]
 
 cos = WaveTable(math.cos, math.pi, 4096)
