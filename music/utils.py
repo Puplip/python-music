@@ -1,4 +1,8 @@
 
+
+from typing import List
+
+
 class RangeFloat():
     def __init__(self, start : float, stop : float, step : float):
 
@@ -37,3 +41,23 @@ class RangeFloat():
 
     def __iter__(self):
         return self
+
+def NoneList(dims : List[int]):
+    out = list()
+    if len(dims) > 1:
+        for i in range(dims[0]):
+            out.append(NoneList(dims[1:]))
+    else:
+        for i in range(dims[0]):
+            out.append(None)
+    return out
+
+def ZeroList(dims : List[int]):
+    out = list()
+    if len(dims) > 1:
+        for i in range(dims[0]):
+            out.append(NoneList(dims[1:]))
+    else:
+        for i in range(dims[0]):
+            out.append(0)
+    return out

@@ -1,26 +1,18 @@
 import music
 
-import scipy.io.wavfile as wav
+import sys
+
 import numpy as np
 
+class Blips(music.Instrument):
+    def __init__(self):
+        self.wave_table = music.WaveTableHarmonic([1 / (n ** 2) for n in range(1,10)])
+        self.envelope = music.ADSR(25,25,0.8,5)
+
+class Bass(music.Instrument):
+    def __init__(self):
+        self.wave_table = music.WaveTableHarmonic([1 / (n) for n in range(1,100)])
+        self.envelope = music.ADSR(20,20,0.8,25)
+
 if __name__ == "__main__":
-    tempo = music.Tempo(120)
-    note_b = music.Note(tempo,0,[0.5],[69])
-    note_t = music.Note(tempo,0,[0.5],[76])
-    instrument = music.Instrument()
-    note_samples_b = list()
-    note_samples_t = list()
-
-    for i in range(16):
-        note_samples_b += instrument.get_note_samples(note_b)
-    
-    for i in range(16):
-        note_samples_t += instrument.get_note_samples(note_t)
-    
-    mixed_samples = list()
-
-    for s0, s1 in zip(note_samples_b, note_samples_t):
-        mixed_samples.append(s0 * 0.5 + s1 * 0.5)
-
-    wav.write("test_output.wav", music.sample_rate, np.array(mixed_samples))
-
+    music.Midi(sys.argv[1]).synth(sys.argv[2],[Blips(),Blips(),Bass(),Blips(),Bass()])
