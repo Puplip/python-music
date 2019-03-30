@@ -7,10 +7,31 @@ from .parameters import sample_rate
 
 import math
 
-class Envelope():
-    def apply(self, sound : List[float], **kargs):
-        raise NotImplementedError
-    
+
+
+class EnvelopePoint():
+    """
+    Creates a point for specifying a point on the envelope and the region following it
+
+        value: the amplitude of the envelope at the beginning of the region
+            (most envelopes should start at 0)
+
+        length: the length of the region (units depend of the length_type)
+
+        length_type: string the type of length (default ratio)
+            absolute: ms for time envelopes or hertz for frequency envelopes
+            ratio: ratio [0 to 1] of the region following the point
+
+            When both absolute and ratio types points are added to an envelope,
+                all ratios will be applied to the length not taken by the absolute envelopes
+
+    """
+    def __init__(self, value : float, length : float, length_type : str, function = EnvelopePoint.exponential):
+        self.value = value
+        self.length = length
+        self.length_type = length_type
+        self.function = function
+
     @staticmethod
     def linear(x : float):
 
@@ -24,6 +45,7 @@ class Envelope():
 
         """
         upwards facing parabola defined by: x^2
+        (approaches slower first)
         """
         return x ** 2
 
@@ -31,6 +53,7 @@ class Envelope():
     def quadratic_negative(x : float):
         """
         downward facing parabola defined by: 1 - (x - 1) ^ x
+        (approaches faster first)
         """
         return 1.0 - (x - 1.0) ** 2
     
@@ -38,6 +61,7 @@ class Envelope():
     def quarter_sin(x : float):
         """
         quarter sine wave (downwards curvature) defined by: sin(2*pi*x)
+        (faster first)
         """
         return math.sin(2*math.pi*x)
     
@@ -45,6 +69,7 @@ class Envelope():
     def half_sin(x : float):
         """
         half sine wave defined by: (sin((x - 1/2) * pi) + 1)/2
+        (slower first)
         """
         return (math.sin(math.pi * (x - 1/2)) + 1) / 2
     
@@ -52,7 +77,8 @@ class Envelope():
     def exponential(x : float, p : float = 50):
         """
         exponential envelope defined by: ((1/p)^(x) - 1) / (1/p - 1)
-        (downwards curvature)
+        (faster first)
+        use a lambda function to change p
         """
 
         a = 1/p
@@ -63,11 +89,23 @@ class Envelope():
     def exponential_upfacing(x : float, p : float = 50):
         """
         exponential envelope defined by: ((p)^(x) - 1) / (p - 1)
-        same as exponential, but with upwards curvature
+        (slower first)
+        use a lambda function to change p
         """
         a = 1/p
 
         return ((a ** x) - 1) / (a - 1)
+
+
+class Envelope():
+
+    def __init__(self, )
+
+
+    def apply(self, sound : List[float], **kargs):
+        raise NotImplementedError
+    
+    
 
 
 class ADSR(Envelope):
