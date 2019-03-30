@@ -26,18 +26,20 @@ class RangeFloat():
             raise Exception("__next__ called after end of itteration")
         if self.up:
             if self.i < self.stop:
+                ret = self.i
                 self.i += self.step
-                return self.i
+                return ret
             else:
                 self.finished = True
-                return StopIteration()
+                raise StopIteration
         else:
             if self.i > self.stop:
+                ret = self.i
                 self.i += self.step
-                return self.i
+                return ret
             else:
                 self.finished = True
-                return StopIteration()
+                raise StopIteration
 
     def __iter__(self):
         return self
@@ -56,7 +58,7 @@ def ZeroList(dims : List[int]):
     out = list()
     if len(dims) > 1:
         for i in range(dims[0]):
-            out.append(NoneList(dims[1:]))
+            out.append(ZeroList(dims[1:]))
     else:
         for i in range(dims[0]):
             out.append(0)

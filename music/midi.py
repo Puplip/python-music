@@ -57,9 +57,9 @@ class Midi():
                     self.tempos.append(MidiTempo(0, 0, msg.tempo, self.midifile.ticks_per_beat))
                 else:
                     self.tempos.append(MidiTempo(self.tempos[-1].start_tick + msg.time, self.tempos[-1].start_sample + self.tempos[-1].get_time(msg.time) , msg.tempo, self.midifile.ticks_per_beat))
-                print(msg.time)
-                print(self.tempos[-1].start_tick)
-                print(self.tempos[-1].start_sample)
+                # print(msg.time)
+                # print(self.tempos[-1].start_tick)
+                # print(self.tempos[-1].start_sample)
         
 
         for i, track in enumerate(self.midifile.tracks):

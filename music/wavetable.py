@@ -7,6 +7,8 @@ from .parameters import sample_rate
 
 from .envelope import Envelope
 
+from .utils import *
+
 class WaveTable():
     """
     General class for storing one period of a wave
@@ -134,9 +136,6 @@ class WaveTable():
 class WaveTableHarmonic(WaveTable):
     """
     class for WaveTables represented by n-integer harmonics of the fundamental
-    """
-    def __init__(self, amplitudes : typing.List[float], **kargs):
-        """
         amplitudes: a list of floats representing the amplitude of each harmonic
 
         optional:
@@ -146,8 +145,10 @@ class WaveTableHarmonic(WaveTable):
                 default: false
             samples: number of samples to store in the table
                 default: 4096
-        """
+    """
 
+    def __init__(self, amplitudes : typing.List[float], **kargs):
+        
         self.last_sample_index = 0
 
         phases = False
@@ -156,7 +157,7 @@ class WaveTableHarmonic(WaveTable):
         elif "random-phases" in kargs:
             phases = [random.random() * math.pi * 2 for x in range(len(amplitudes))]
         else:
-            phases = [0 for x in range(len(amplitudes))]
+            phases = ZeroList([len(amplitudes)])
         
         if len(phases) != len(amplitudes):
             raise Exception("Number of phases must match the number of amplitudes")
@@ -167,15 +168,84 @@ class WaveTableHarmonic(WaveTable):
                 raise Exception("Samples must be a positive integer")
         else:
             self.samples = 4096
+
+        self.cached_tables = dict()
         
-        self.wave_table = [0 for x in range(self.samples)]
+        self.harmonic_tables = ZeroList([len(amplitudes),self.samples])
 
-        for sample in range(self.samples):
-            for amplitude, phase in zip(amplitudes,phases):
-                self.wave_table[sample] += amplitude * math.cos(phase + sample / self.samples * math.pi * 2)
+        for amplitude, phase, harmonic, f in zip(amplitudes, phases, self.harmonic_tables, list(range(1,len(amplitudes)+1))):
+            for sample in range(len(harmonic)):
+                harmonic[sample] += amplitude * math.cos(phase + sample / self.samples * math.pi * 2 * f)
+            max_amp = abs(max(harmonic))
+            if max_amp != 0:
+                harmonic = [x / max_amp for x in harmonic]
+    def set_wave_table(self, frequency : float):
+        """
+        Sets the wave_table as to not include frequencies above the half sample rate
+        """
+        harmonics = int(((sample_rate // 2) - frequency) // frequency)
+
+        harmonics = min(harmonics, len(self.harmonic_tables))
+
+        if harmonics in self.cached_tables:
+            self.wave_table = self.cached_tables[harmonics]
         
-        max_amp = max(self.wave_table)
+        else:
+            new_table = ZeroList([self.samples])
+            
+            for harmonic in range(harmonics):
+                new_table = [x + y for x,y in zip(new_table, self.harmonic_tables[harmonic])]
+            self.wave_table = new_table
+            self.cached_tables[harmonics] = new_table
 
-        self.wave_table = [x / max_amp for x in self.wave_table]
+    def get_samples(self, frequency : float, **kwargs):
+        """
+        Function used for sampling the wave table to get an output at a set frequency.
 
-cos = WaveTable(math.cos, math.pi, 4096)
+        Required arguments:
+            frequency: the frequency in hertz of the output
+
+            One length specifier from:
+                samples: the length in samples of the output
+                length: the length in seconds of the output
+                periods: the length in periods at frequency
+        Optional arguments:
+            starting_phase: phase to start the output at in radians
+                default: 0
+            random_phase: boolean indicating if a random phase offset should be applied
+                default: False
+        """
+        self.set_wave_table(frequency)
+
+        return super().get_samples(frequency, **kwargs)
+    
+    def get_samples_bend(self, frequency1 : float, frequency2 : float, **kwargs):
+        """
+        Function used for sampling the wave table to get an output at a set frequency.
+
+        Required arguments:
+            frequency1: the frequency in hertz of the beginning of the ouput
+            frequency2: the frequency in hertz of the end of the output
+
+            One length specifier from:
+                samples: the length in samples of the output
+                length: the length in seconds of the output
+        Optional arguments:
+            starting_phase: phase to start the output at in radians
+                default: 0
+            random_phase: boolean indicating if a random phase offset should be applied
+                default: False
+        """
+
+        self.set_wave_table(max(frequency1,frequency2))
+
+        return super().get_samples_bend(frequency1, frequency2, **kwargs)
+
+cos = WaveTable(math.cos, math.pi, sample_rate * 2)
+
+saw = WaveTableHarmonic([1/n for n in range(1,257)])
+
+ocean_saw = WaveTableHarmonic([1/ (n ** 2) for n in range(1,257)])
+
+square = WaveTableHarmonic([(1/n if n % 2 == 1 else 0) for n in range(1,257)])
+
