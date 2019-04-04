@@ -63,3 +63,17 @@ def ZeroList(dims : List[int]):
         for i in range(dims[0]):
             out.append(0)
     return out
+
+class CacheDict(dict):
+    def __init__(self, max_count : int):
+        self.max_count = max_count
+        self.dict = dict()
+    def __contains__(self, x):
+        return x in self.dict
+    def __getitem__(self, x):
+        return self.dict[x]
+    def __setitem__(self, x, y):
+        self.dict[x] = y
+        if len(self.dict) > self.max_count:
+            self.dict.pop(next(iter(self.dict)))
+    

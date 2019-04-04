@@ -9,6 +9,7 @@ from .envelope import Envelope
 
 from .utils import *
 
+
 class WaveTable():
     """
     General class for storing one period of a wave
@@ -169,7 +170,7 @@ class WaveTableHarmonic(WaveTable):
         else:
             self.samples = 4096
 
-        self.cached_tables = dict()
+        self.cached_tables = CacheDict(50)
         
         self.harmonic_tables = ZeroList([len(amplitudes),self.samples])
 

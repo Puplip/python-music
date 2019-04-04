@@ -7,6 +7,7 @@ from .parameters import sample_rate
 
 import math
 
+from .utils import *
 
 
 class EnvelopePoint():
@@ -26,7 +27,11 @@ class EnvelopePoint():
                 all ratios will be applied to the length not taken by the absolute envelopes
 
     """
-    def __init__(self, value : float, length : float, length_type : str, function = EnvelopePoint.exponential):
+
+
+
+
+    def __init__(self, value : float, length : float, length_type : str = "ratio", function = EnvelopePoint.exponential):
         self.value = value
         self.length = length
         self.length_type = length_type
@@ -99,14 +104,83 @@ class EnvelopePoint():
 
 class Envelope():
 
-    def __init__(self, )
+    def __init__(self, points : List[EnvelopePoint]):
 
+        self.points = list(points)
 
-    def apply(self, sound : List[float], **kargs):
-        raise NotImplementedError
+        self.ratio_points = set()
+        self.absolute_points = set()
+
+        self.absolute_length = 0
+        self.ratio_length = 0
+
+        self.cached_time_points = CacheDict(50)
+
+        for point in self.points:
+            if point.length_type == "ratio":
+                self.ratio_points.add(point)
+                self.ratio_length += point.length
+            elif point.length_type == "absolute":
+                self.absolute_points.add(point)
+                self.absolute_length += point.length
+            else:
+                raise Exception(f"Invalid EnvelopePoint.length_type: '{point.length_type}'")
+        
+
+    def value(self, x, length = 1.0):
+
+        if self.absolute_length > length:
+            raise Exception(f"length is less that envelope's absolute length")
+        
+        if length not in self.cached_time_points:
+        
+            ratio_length = length - self.absolute_length
+
+            point_times = list()
+
+            pos = 0
+            time = 0
+
+            for point in self.points:
+                
+                if point.length_type == "ratio":
+                    time = ratio_length * (point.length / self.ratio_length)
+                elif point.length_type == "absolute":
+                    time = point.length
+                else:
+                    raise Exception(f"Invalid EnvelopePoint.length_type: '{point.length_type}'")
+                
+                point_times.append((pos, time))
+                pos += time
+            
+            self.cached_time_points[length] = point_times
+        
+        prev_start = False
+        prev_point = False
+        prev_length = False
+
+        next_point = False
+
+        for (start, length), point in zip(self.cached_time_points[length], self.points):
+            if start < x:
+                prev_start = start
+                prev_point = point
+                prev_length = length
+            else:
+                next_point = point
+                break
+
+        delta_value = next_point.value - prev_point.value
+
+        return  delta_value * prev_point.function((x - prev_start) / prev_length) + prev_point.value
     
-    
+    def apply(self, array : List[float]):
+        output = list()
 
+        for i, x in enumerate(array):
+            output.append(x * self.value(i, len(array)))
+        
+        return output
 
 class ADSR(Envelope):
     """
@@ -134,57 +208,25 @@ class ADSR(Envelope):
         if "attack_function" in kargs:
             self.attack_function = kargs["attack_function"]
         else:
-            self.attack_function = Envelope.exponential
+            self.attack_function = EnvelopePoint.exponential
         
         if "decay_function" in kargs:
             self.decay_function = kargs["decay_function"]
         else:
-            self.decay_function = Envelope.exponential
+            self.decay_function = EnvelopePoint.exponential
         
         if "release_function" in kargs:
             self.release_function = kargs["release_function"]
         else:
-            self.release_function = Envelope.exponential
+            self.release_function = EnvelopePoint.exponential
 
-        self.attack_start = 0
-        self.attack_length = attack
-        self.attack_end = self.attack_start + self.attack_length
-
-        self.decay_start = self.attack_end
-        self.decay_length = decay
-        self.decay_end = self.decay_start + self.decay_length
-
-        self.sustain_level = sustain
-
-        self.release_length = release
-
-        sample_rate_ks = sample_rate / 1000
-
-        # convert the timings to samples
-        self.attack_start *= sample_rate_ks
-        self.attack_length *= sample_rate_ks
-        self.attack_end *= sample_rate_ks
-
-        self.decay_start *= sample_rate_ks
-        self.decay_length *= sample_rate_ks
-        self.decay_end *= sample_rate_ks
-
-        self.release_length *= sample_rate_ks
-
-    def apply(self, sound : List[float], **kargs):
-
-        output = list()
-
-        for i, sample in enumerate(sound):
-            if i < self.attack_end:
-                output.append(self.attack_function(i / self.attack_length) * sample)
-            elif i < self.decay_end:
-                output.append((1 - self.decay_function((i - self.decay_start) / self.decay_length) * (1 - self.sustain_level)) * sample)
-            elif i >= (len(sound) - self.release_length):
-                output.append(self.sustain_level  * sample * (1 - self.release_function((self.release_length - (len(sound) - i)) / self.release_length)))
-            else:
-                output.append(self.sustain_level * sample)
         
-        return output
+        self.attack = EnvelopePoint(0,attack / 1000 * sample_rate,"absolute", self.attack_function)
+        self.decay = EnvelopePoint(1,decay / 1000 * sample_rate,"absolute", self.decay_function)
+        self.sustain = EnvelopePoint(sustain,1.0,"ratio", EnvelopePoint.linear)
+        self.release = EnvelopePoint(sustain,release / 1000 * sample_rate,"absolute", self.release_function)
+        self.end = EnvelopePoint(0,0)
+
+
     
     
