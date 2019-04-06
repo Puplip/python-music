@@ -27,16 +27,6 @@ class EnvelopePoint():
                 all ratios will be applied to the length not taken by the absolute envelopes
 
     """
-
-
-
-
-    def __init__(self, value : float, length : float, length_type : str = "ratio", function = EnvelopePoint.exponential):
-        self.value = value
-        self.length = length
-        self.length_type = length_type
-        self.function = function
-
     @staticmethod
     def linear(x : float):
 
@@ -101,6 +91,15 @@ class EnvelopePoint():
 
         return ((a ** x) - 1) / (a - 1)
 
+    def __init__(self, value : float, length : float, length_type : str = "ratio", function = False):
+        self.value = value
+        self.length = length
+        self.length_type = length_type
+        if function:
+            self.function = function
+        else:
+            self.function = EnvelopePoint.exponential
+
 
 class Envelope():
 
@@ -161,8 +160,12 @@ class Envelope():
 
         next_point = False
 
+        # print(len(self.cached_time_points[length]), len(self.points))
+
+
         for (start, length), point in zip(self.cached_time_points[length], self.points):
-            if start < x:
+            # print(start, length, point)
+            if start <= x:
                 prev_start = start
                 prev_point = point
                 prev_length = length
@@ -226,6 +229,8 @@ class ADSR(Envelope):
         self.sustain = EnvelopePoint(sustain,1.0,"ratio", EnvelopePoint.linear)
         self.release = EnvelopePoint(sustain,release / 1000 * sample_rate,"absolute", self.release_function)
         self.end = EnvelopePoint(0,0)
+
+        super().__init__([self.attack, self.decay, self.sustain, self.release, self.end])
 
 
     

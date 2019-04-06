@@ -244,9 +244,9 @@ class WaveTableHarmonic(WaveTable):
 
 cos = WaveTable(math.cos, math.pi, sample_rate * 2)
 
-saw = WaveTableHarmonic([1/n for n in range(1,257)])
+saw = WaveTableHarmonic([1/n for n in range(1,1025)])
 
-ocean_saw = WaveTableHarmonic([1/ (n ** 2) for n in range(1,257)])
+ocean_saw = WaveTableHarmonic([1/ (n ** 2) for n in range(1,1025)])
 
-square = WaveTableHarmonic([(1/n if n % 2 == 1 else 0) for n in range(1,257)])
+square = WaveTableHarmonic([(1/n if n % 2 == 1 else 0) for n in range(1,1025)])
 
