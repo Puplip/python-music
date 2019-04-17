@@ -16,10 +16,15 @@ class Instrument():
     def get_note_samples(self, note : Note):
 
         # get the length of the note in samples
-        sample_length = note.tempo.get_time(sum(note.length))
+        # sample_length = note.tempo.get_time(sum(note.length))
         # print(sample_length)
 
         output_samples = list()
+
+        total_length = note.tempo.get_time(sum(note.length))
+
+        if total_length < self.envelope.absolute_length:
+            note.length[-1] += self.envelope.absolute_length - total_length
 
         for i, (length, pitch) in enumerate(zip(note.length,note.pitch)):
             if i < len(note.length) - 1:
