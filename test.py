@@ -25,4 +25,4 @@ class OceanSaw(music.Instrument):
         self.envelope = music.ADSR(20,20,0.8,25)
 
 if __name__ == "__main__":
-    music.Midi(sys.argv[1]).synth(sys.argv[2],[Blips(),Blips(),Square(),Square()])
+    music.Midi(sys.argv[1]).synth(sys.argv[2],[Blips(),OceanSaw(),Square()])
