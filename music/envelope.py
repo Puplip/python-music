@@ -129,7 +129,7 @@ class Envelope():
     def value(self, x, length = 1.0):
 
         if self.absolute_length > length:
-            raise Exception(f"length is less that envelope's absolute length")
+            raise Exception(f"length: {length} is less that envelope's absolute length: {self.absolute_length}")
         
         if length not in self.cached_time_points:
         
