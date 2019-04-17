@@ -79,7 +79,7 @@ class Midi():
                         open_notes[msg.note] = msg
                     elif msg.type == "note_off":
                         start_sample = self.tick2sample(open_notes[msg.note].time)
-                        self.track_notes[i].append(Note(Midi.sample_tempo,start_sample,[self.tick2sample(msg.time) - start_sample],[msg.note],open_notes[msg.note].velocity / 127))
+                        self.track_notes[i].append(Note(Midi.sample_tempo,start_sample,[self.tick2sample(msg.time) - start_sample],[msg.note],(open_notes[msg.note].velocity / 127) ** 2))
     
     def tick2sample(self,tick : float):
 
